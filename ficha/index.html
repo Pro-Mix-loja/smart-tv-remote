@@ -171,6 +171,16 @@ details .stack{display:grid;gap:12px;padding-bottom:6px}
   .bar{display:none}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+.cam{position:fixed;inset:0;z-index:50;background:#000;display:flex;flex-direction:column}
+.cam[hidden]{display:none}
+.cam video{flex:1;min-height:0;width:100%;object-fit:contain;background:#000}
+.cam-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px calc(14px + env(safe-area-inset-bottom));background:#0b0f14}
+.cam-bar .btn{min-width:96px}
+.cam-n{color:#fff;font:600 14px/1.2 var(--body);text-align:center;flex:1}
+.cam-shot{width:72px;height:72px;border-radius:50%;border:4px solid #fff;background:#e8eef3;cursor:pointer;padding:0}
+.cam-shot:active{background:#b7c4cf}
+.cam-msg{color:#fff;font:500 14px/1.3 var(--body);padding:10px 16px;background:#0b0f14;text-align:center}
 </style>
 </head>
 <body>
@@ -229,7 +239,7 @@ details .stack{display:grid;gap:12px;padding-bottom:6px}
             <label for="fotoLocal">Fotos do local</label>
             <p class="small" style="display:block">Local inteiro, altura, tipo de parede e onde ficaria o suporte.</p>
             <div class="fotos" id="fotosLocal"></div>
-            <div class="foto-acoes"><label class="btn ghost"><input class="sr" type="file" accept="image/*" capture="environment" id="fotoLocalCam"><span>Câmera</span></label> <label class="btn ghost"><input class="sr" type="file" accept="image/*" multiple id="fotoLocal"><span>Galeria</span></label></div>
+            <div class="foto-acoes"><button type="button" class="btn ghost" id="btnCamLocal">Câmera</button> <label class="btn ghost"><input class="sr" type="file" accept="image/*" multiple id="fotoLocal"><span>Galeria</span></label></div>
             <p class="small" id="fmsgLocal"></p>
           </div>
         </div>
@@ -265,6 +275,15 @@ details .stack{display:grid;gap:12px;padding-bottom:6px}
   </div>
 </div>
 
+<div class="cam" id="cam" hidden role="dialog" aria-label="Câmera">
+  <video id="camVideo" playsinline muted autoplay></video>
+  <p class="cam-msg" id="camMsg">Aponte e toque no botão redondo. Pode tirar várias.</p>
+  <div class="cam-bar">
+    <button type="button" class="btn ghost" id="camCancel" style="color:#fff;border-color:#5b6b7a">Fechar</button>
+    <button type="button" class="cam-shot" id="camShot" aria-label="Tirar foto"></button>
+    <p class="cam-n" id="camN"></p>
+  </div>
+</div>
 <div class="bar">
   <p id="barStatus">Ficha vazia</p>
   <button type="button" class="btn primary" id="btnVer">Ver ficha</button>
@@ -539,7 +558,7 @@ details .stack{display:grid;gap:12px;padding-bottom:6px}
     });
   }
   function renderFotosLocal(){$('#fotosLocal').innerHTML=thumbsHTML(S.fotosLocal,'Foto do local');}
-  ['#fotoLocal','#fotoLocalCam'].forEach(function(sel){
+  ['#fotoLocal'].forEach(function(sel){
     $(sel).addEventListener('change',function(e){
       var files=e.target.files;
       adicionarFotos(files,S.fotosLocal,MAX_LOCAL,$('#fmsgLocal'),renderFotosLocal);
@@ -551,6 +570,55 @@ details .stack{display:grid;gap:12px;padding-bottom:6px}
     var pid=b.getAttribute('data-pid');
     S.fotosLocal=S.fotosLocal.filter(function(x){return x!==pid;});
     soltarFoto(pid);renderFotosLocal();update();
+  });
+
+
+  /* câmera dentro do app: não troca de aplicativo, então o Android não derruba a ficha por falta de memória */
+  var camAlvo=null,camStream=null;
+  function camFechar(){
+    if(camStream){camStream.getTracks().forEach(function(t){t.stop();});camStream=null;}
+    var v=$('#camVideo');v.srcObject=null;$('#cam').hidden=true;document.body.style.overflow='';camAlvo=null;
+  }
+  function camAtualiza(){
+    if(!camAlvo)return;
+    $('#camN').textContent='Fotos: '+camAlvo.lista.length+' de '+camAlvo.max;
+  }
+  function camFallback(alvo){
+    var inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.setAttribute('capture','environment');
+    inp.onchange=function(){adicionarFotos(inp.files,alvo.lista,alvo.max,alvo.msgEl,alvo.redesenhar);};
+    inp.click();
+  }
+  function abrirCamera(alvo){
+    if(alvo.lista.length>=alvo.max){alvo.msgEl.textContent='Limite de '+alvo.max+' fotos.';return;}
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){camFallback(alvo);return;}
+    navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}}).then(function(st){
+      camStream=st;camAlvo=alvo;
+      var v=$('#camVideo');v.srcObject=st;
+      $('#cam').hidden=false;document.body.style.overflow='hidden';
+      var p=v.play();if(p&&p.catch)p.catch(function(){});
+      $('#camMsg').textContent='Aponte e toque no botão redondo. Pode tirar várias.';
+      camAtualiza();
+    },function(){
+      alvo.msgEl.textContent='Não consegui abrir a câmera aqui. Libere a câmera para este app ou use Galeria.';
+      camFallback(alvo);
+    });
+  }
+  $('#camShot').addEventListener('click',function(){
+    if(!camAlvo)return;
+    if(camAlvo.lista.length>=camAlvo.max){$('#camMsg').textContent='Limite de '+camAlvo.max+' fotos.';return;}
+    var v=$('#camVideo');
+    if(!v.videoWidth){$('#camMsg').textContent='A câmera ainda está iniciando. Tente de novo.';return;}
+    try{
+      var du=paraJpeg(v,v.videoWidth,v.videoHeight),id=guardarFoto(du);
+      camAlvo.lista.push(id);camAlvo.redesenhar();update();camAtualiza();
+      $('#camMsg').textContent='Foto salva.';
+      if(camAlvo.lista.length>=camAlvo.max){$('#camMsg').textContent='Limite de fotos atingido.';}
+    }catch(e){$('#camMsg').textContent='Não consegui salvar a foto. Tente de novo.';}
+  });
+  $('#camCancel').addEventListener('click',camFechar);
+  document.addEventListener('visibilitychange',function(){if(document.hidden&&camStream)camFechar();});
+  $('#btnCamLocal').addEventListener('click',function(){
+    abrirCamera({lista:S.fotosLocal,max:MAX_LOCAL,msgEl:$('#fmsgLocal'),redesenhar:renderFotosLocal});
   });
 
   /* pontos */
@@ -565,7 +633,7 @@ details .stack{display:grid;gap:12px;padding-bottom:6px}
       '</div>'+
       '<p class="readout" data-readout hidden></p>'+
       '<div class="fotos" data-fotos></div>'+
-      '<div class="foto-acoes"><label class="btn ghost"><input class="sr" type="file" accept="image/*" capture="environment" data-foto><span>Câmera</span></label> <label class="btn ghost"><input class="sr" type="file" accept="image/*" multiple data-foto><span>Galeria</span></label></div>'+
+      '<div class="foto-acoes"><button type="button" class="btn ghost" data-act="cam">Câmera</button> <label class="btn ghost"><input class="sr" type="file" accept="image/*" multiple data-foto><span>Galeria</span></label></div>'+
       '<p class="small" data-fmsg></p>'+
     '</article>';
   }
@@ -606,6 +674,9 @@ details .stack{display:grid;gap:12px;padding-bottom:6px}
     if(!b)return;
     var art=b.closest('.item'),it=itemDoArt(art),act=b.getAttribute('data-act');
     if(!it)return;
+    if(act==='cam'){
+      abrirCamera({lista:it.fotos,max:MAX_FOTOS,msgEl:$('[data-fmsg]',art),redesenhar:function(){renderFotos(art);}});return;
+    }
     if(act==='rmfoto'){
       var pid=b.getAttribute('data-pid');
       it.fotos=it.fotos.filter(function(x){return x!==pid;});
