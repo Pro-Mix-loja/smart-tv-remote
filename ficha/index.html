@@ -807,10 +807,11 @@ details .stack{display:grid;gap:12px;padding-bottom:6px}
     $('#msg').textContent='';
     refreshPasso();
     save();
+    agendarPreparo();
   }
 
   var msgTimer=null;
-  function msg(m){var el=$('#msg');el.textContent=m;clearTimeout(msgTimer);msgTimer=setTimeout(function(){el.textContent='';},8000);}
+  function msg(m){var el=$('#msg');el.textContent=m;clearTimeout(msgTimer);msgTimer=setTimeout(function(){el.textContent='';},15000);}
   function copiar(el,ok){
     var text=el.value;
     function manual(){
@@ -848,38 +849,61 @@ details .stack{display:grid;gap:12px;padding-bottom:6px}
     a.href=u;a.download=file.name;document.body.appendChild(a);a.click();
     setTimeout(function(){URL.revokeObjectURL(u);a.remove();},1500);
   }
-  var enviando=false;
+  var enviando=false,prep=null,prepTimer=null;
+  function chaveEnvio(){
+    var ids=[];pontos(S).forEach(function(it){ids=ids.concat(it.fotos);});ids=ids.concat(S.fotosLocal);
+    return ta.value+'|'+ids.join(',');
+  }
+  function montarEnvio(){
+    var chave=chaveEnvio(),d=buildJSON(S,false),now=new Date();
+    var base=(d.tipo==='solicitacao'?'solicitacao-':'ficha-')+(slug(S.nome)||'sem-cliente')+'-'+hoje().replace(/-/g,'')+'-'+pad(now.getHours())+pad(now.getMinutes());
+    var jsonTxt=JSON.stringify(d,null,2),texto=ta.value;
+    return Promise.all(arquivosFotos().map(function(f){return dataUrlToFile(f[1],f[0]);})).then(function(imgs){
+      return {chave:chave,texto:texto,imgs:imgs,
+        fJson:new File([jsonTxt],base+'.json',{type:'application/json'}),
+        fTxt:new File([jsonTxt],base+'.txt',{type:'text/plain'})};
+    });
+  }
+  function agendarPreparo(){
+    prep=null;clearTimeout(prepTimer);
+    if(!touched(S))return;
+    prepTimer=setTimeout(function(){
+      var c=chaveEnvio();
+      montarEnvio().then(function(p){if(p.chave===chaveEnvio())prep=p;},function(){});
+    },500);
+  }
+  function plano(p){
+    return [[p.fJson].concat(p.imgs),[p.fTxt].concat(p.imgs),p.imgs].filter(function(l){return l.length;});
+  }
+  function porBaixar(p,motivo){
+    baixar(p.fJson);
+    p.imgs.forEach(function(f,i){setTimeout(function(){baixar(f);},500*(i+1));});
+    msg((motivo?motivo+' ':'')+'Arquivos baixados. Abra o WhatsApp e anexe a ficha e as fotos.');
+    window.open('https://wa.me/?text='+encodeURIComponent(p.texto),'_blank');
+  }
+  function compartilhar(p){
+    var lista=null;
+    if(podeCompartilhar()){
+      var pl=plano(p);
+      for(var i=0;i<pl.length;i++){var ok=false;try{ok=navigator.canShare({files:pl[i]});}catch(e){}if(ok){lista=pl[i];break;}}
+    }
+    if(!lista){porBaixar(p,'');return Promise.resolve();}
+    return navigator.share({files:lista,text:p.texto,title:'Ficha de orçamento'}).then(function(){
+      msg('Pronto. Confira a conversa no WhatsApp.');
+    },function(err){
+      var n=(err&&err.name)||'erro';
+      if(n==='AbortError'){msg('Envio cancelado.');return;}
+      if(n==='NotAllowedError'||n==='SecurityError'){prep=p;msg('O celular pediu um novo toque. Toque em Enviar pelo WhatsApp de novo.');return;}
+      porBaixar(p,'O compartilhamento falhou ('+n+').');
+    });
+  }
   $('#btnEnviar').addEventListener('click',function(){
     if(!touched(S)||enviando)return;
     enviando=true;
-    var d=buildJSON(S,false),now=new Date();
-    var base=(d.tipo==='solicitacao'?'solicitacao-':'ficha-')+(slug(S.nome)||'sem-cliente')+'-'+hoje().replace(/-/g,'')+'-'+pad(now.getHours())+pad(now.getMinutes());
-    var jsonTxt=JSON.stringify(d,null,2),texto=ta.value;
-    var fotos=arquivosFotos();
-    Promise.all(fotos.map(function(f){return dataUrlToFile(f[1],f[0]);})).then(function(imgs){
-      var fJson=new File([jsonTxt],base+'.json',{type:'application/json'});
-      var fTxt=new File([jsonTxt],base+'.txt',{type:'text/plain'});
-      var tentativas=[[fJson].concat(imgs),[fTxt].concat(imgs),imgs];
-      if(podeCompartilhar()){
-        for(var i=0;i<tentativas.length;i++){
-          var lista=tentativas[i];
-          if(!lista.length)continue;
-          var ok=false;try{ok=navigator.canShare({files:lista});}catch(e){}
-          if(ok){
-            return navigator.share({files:lista,text:texto,title:'Ficha de orçamento'}).then(function(){
-              msg('Enviado para o compartilhamento. Confira no WhatsApp.');
-            },function(err){
-              if(err&&err.name==='AbortError')msg('Envio cancelado.');
-              else msg('Não consegui compartilhar. Use Copiar resumo.');
-            });
-          }
-        }
-      }
-      baixar(fJson);
-      imgs.forEach(function(f,i){setTimeout(function(){baixar(f);},400*(i+1));});
-      msg('Arquivos baixados. Abra o WhatsApp e anexe a ficha e as fotos.');
-      window.open('https://wa.me/?text='+encodeURIComponent(texto),'_blank');
-    }).then(function(){enviando=false;},function(){enviando=false;msg('Algo falhou ao montar o envio.');});
+    var fim=function(){enviando=false;};
+    if(prep&&prep.chave===chaveEnvio()){compartilhar(prep).then(fim,fim);return;}
+    msg('Preparando a ficha e as fotos...');
+    montarEnvio().then(function(p){prep=p;return compartilhar(p);}).then(fim,function(e){fim();msg('Não consegui montar o envio ('+((e&&e.name)||'erro')+').');});
   });
 
   var limparTimer=null,limparArmado=false,bl=$('#btnLimpar');
