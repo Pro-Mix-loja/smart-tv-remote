@@ -1,0 +1,859 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0A6EA6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ficha VS Graf">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Ficha de Orçamento</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  /* Layout: ficha de campo enxuta em coluna única, pontos medidos como cartões, resumo fixo à direita no desktop e no fim da página no celular. */
+  --paper:#EEF1F4;
+  --surface:#FFFFFF;
+  --ink:#13202C;
+  --ink-2:#4B5A68;
+  --line:#D8DEE4;
+  --line-2:#B7C1CB;
+  --accent:#0A6EA6;
+  --accent-ink:#FFFFFF;
+  --accent-soft:#E0EFF8;
+  --warn:#9A4F00;
+  --warn-ink:#FFFFFF;
+  --warn-soft:#FCEFD9;
+  --ok:#17744A;
+  --focus:#0A6EA6;
+  --c:#00A3D9;
+  --m:#D6246E;
+  --y:#F2C200;
+  --k:#13202C;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0E151C;--surface:#16202A;--ink:#E7EDF2;--ink-2:#9FAFBD;--line:#26323F;--line-2:#3A4959;
+    --accent:#5BB8EA;--accent-ink:#06202F;--accent-soft:#12303F;
+    --warn:#F0B14F;--warn-ink:#2A1A00;--warn-soft:#33250F;--ok:#59C890;--focus:#5BB8EA;--k:#E7EDF2;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0E151C;--surface:#16202A;--ink:#E7EDF2;--ink-2:#9FAFBD;--line:#26323F;--line-2:#3A4959;
+  --accent:#5BB8EA;--accent-ink:#06202F;--accent-soft:#12303F;
+  --warn:#F0B14F;--warn-ink:#2A1A00;--warn-soft:#33250F;--ok:#59C890;--focus:#5BB8EA;--k:#E7EDF2;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+.page{max-width:1120px;margin-inline:auto;padding-inline:16px;padding-block:24px 104px}
+.sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);border:0}
+
+/* cabeçalho */
+.eyebrow{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.colorbar{display:flex;gap:4px}
+.colorbar i{display:block;width:30px;height:6px}
+.colorbar i:nth-child(1){background:var(--c)}
+.colorbar i:nth-child(2){background:var(--m)}
+.colorbar i:nth-child(3){background:var(--y)}
+.colorbar i:nth-child(4){background:var(--k)}
+.eyebrow span{font:500 12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2)}
+.head-row{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between;align-items:flex-end}
+h1{font:700 clamp(34px,7vw,48px)/1 var(--display);letter-spacing:.01em;margin:0;text-wrap:balance;text-transform:uppercase}
+.head-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* botões */
+.btn{font:600 15px/1 var(--body);min-height:44px;padding:0 16px;border-radius:4px;border:1px solid transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;transition:background .15s,border-color .15s,filter .15s;position:relative}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.outline{background:transparent;color:var(--accent);border-color:var(--accent)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line-2)}
+.btn.ghost:hover{border-color:var(--ink-2)}
+.btn[aria-disabled="true"]{opacity:.45;pointer-events:none}
+.btn:focus-visible,.btn:focus-within,.link:focus-visible,.star:focus-visible,summary:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+/* layout */
+.layout{display:grid;grid-template-columns:minmax(0,1fr);gap:24px;margin-top:20px}
+.form{min-width:0}
+.sec{padding-block:20px;border-top:1px solid var(--line-2)}
+.sec:first-child{border-top:0;padding-top:0}
+.sec h2,.panel h2{font:600 22px/1.1 var(--display);text-transform:uppercase;letter-spacing:.06em;margin:0 0 12px}
+
+/* campos */
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px 16px}
+.grid>*{grid-column:1/-1}
+.grid>.m6{grid-column:span 6}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+label,legend{font-weight:600;font-size:14px;color:var(--ink);padding:0}
+fieldset{border:0;margin:0;padding:0;min-width:0;display:flex;flex-direction:column;gap:8px}
+input[type=text],textarea{
+  width:100%;min-height:44px;padding:10px 12px;font:400 16px/1.3 var(--body);color:var(--ink);
+  background:var(--surface);border:1px solid var(--line-2);border-radius:4px;
+}
+textarea{min-height:76px;resize:vertical}
+input:focus,textarea:focus{outline:2px solid var(--focus);outline-offset:0;border-color:var(--focus)}
+::placeholder{color:var(--ink-2);opacity:.75}
+.name-big input{font-size:20px;min-height:52px}
+.small{margin:0;font-size:13px;color:var(--ink-2)}
+.small:empty{display:none}
+
+/* chips */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{position:relative;display:inline-flex}
+.chip input{position:absolute;inset:0;width:100%;height:100%;opacity:0;margin:0;cursor:pointer}
+.chip span{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border:1px solid var(--line-2);border-radius:4px;background:var(--surface);font-weight:500;user-select:none;transition:background .12s,border-color .12s}
+.chip input:checked+span{background:var(--warn);border-color:var(--warn);color:var(--warn-ink)}
+.chip input:checked+span::before{content:"\2713";margin-right:8px;font-weight:700}
+.chip input:focus-visible+span{outline:2px solid var(--focus);outline-offset:2px}
+
+/* pontos medidos */
+.items{display:grid;gap:12px}
+.item{background:var(--surface);border:1px solid var(--line-2);border-radius:8px;padding:14px;display:grid;gap:12px;min-width:0}
+.item-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.item-act{display:flex;gap:2px}
+.item h3{font:600 19px/1 var(--display);text-transform:uppercase;letter-spacing:.06em;margin:0}
+.link{background:none;border:0;color:var(--ink-2);text-decoration:underline;font:500 14px var(--body);cursor:pointer;min-height:44px;padding:0 8px}
+.readout{margin:0;font:500 13px/1.45 var(--mono);background:var(--accent-soft);padding:7px 12px;border-radius:4px;font-variant-numeric:tabular-nums}
+.fotos{display:flex;flex-wrap:wrap;gap:8px}
+.fotos:empty{display:none}
+.thumb{position:relative;margin:0;width:88px;height:88px;border-radius:4px;overflow:hidden;border:1px solid var(--line-2)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .x{position:absolute;top:3px;right:3px;width:32px;height:32px;border-radius:4px;border:0;cursor:pointer;background:var(--surface);color:var(--ink);font:600 14px var(--body);opacity:.92}
+.foto-acoes{display:flex;flex-wrap:wrap;gap:8px}
+.add{width:100%;margin-top:12px;border:1.5px dashed var(--line-2);background:transparent;color:var(--accent)}
+.add:hover{border-color:var(--accent)}
+
+/* urgência */
+.stars{display:flex;align-items:center;flex-wrap:wrap;gap:2px}
+.star{background:none;border:0;cursor:pointer;font-size:36px;line-height:1;min-width:48px;min-height:48px;color:var(--line-2);padding:0}
+.star.on{color:var(--warn)}
+.star-txt{margin-left:10px;font:500 14px var(--mono);color:var(--ink-2)}
+
+/* painel da ficha recebida */
+.panel{margin-top:20px;background:var(--surface);border:1px solid var(--line-2);border-radius:8px;padding:16px}
+.panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.rec-form{display:grid;gap:12px}
+details{border-top:1px solid var(--line);padding-top:4px}
+summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center;gap:6px}
+details .stack{display:grid;gap:12px;padding-bottom:6px}
+
+/* resumo */
+.summary{background:var(--surface);border:1px solid var(--line-2);border-radius:8px;padding:16px;display:grid;gap:12px;min-width:0}
+.sum-head h2{font:600 22px/1 var(--display);text-transform:uppercase;letter-spacing:.06em;margin:0}
+.status{margin:0;font-size:14px;display:flex;gap:8px;align-items:flex-start}
+.dot{flex:none;width:10px;height:10px;border-radius:50%;margin-top:6px;background:var(--line-2)}
+.status.warn .dot{background:var(--warn)}
+.status.ok .dot{background:var(--ok)}
+#out,#outJson{width:100%;resize:vertical;font:400 13px/1.55 var(--mono);background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:12px;white-space:pre-wrap}
+#out{height:300px}
+#outJson{height:240px;white-space:pre}
+.actions{display:grid;gap:8px}
+.msg{min-height:1.4em;margin:0;font-size:14px;color:var(--ink-2)}
+.passo{margin:0;font-size:14px;padding:10px 12px;border-radius:4px;background:var(--paper);color:var(--ink-2)}
+.passo.pronto{background:var(--accent-soft);color:var(--ink)}
+
+/* barra no celular */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line-2)}
+.bar p{margin:0;font-size:14px;font-weight:500;min-width:0}
+
+@media (min-width:960px){
+  .page{padding-block:36px 56px}
+  .layout{grid-template-columns:minmax(0,1fr) 400px;gap:40px;align-items:start}
+  .summary{position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px)}
+  .bar{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header>
+    <div class="eyebrow"><div class="colorbar" aria-hidden="true"><i></i><i></i><i></i><i></i></div><span>VS Graf</span></div>
+    <div class="head-row">
+      <h1>Ficha de Orçamento</h1>
+      <div class="head-actions">
+        <button type="button" class="btn outline" id="btnReceber">Abrir ficha recebida</button>
+        <button type="button" class="btn ghost" id="btnLimpar">Limpar tudo</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="panel" id="receber" hidden aria-label="Abrir ficha recebida">
+    <div class="panel-head">
+      <h2>Ficha recebida</h2>
+      <button type="button" class="btn ghost" id="btnFecharRec">Fechar</button>
+    </div>
+    <div class="rec-form">
+      <div class="field"><label for="recFile">Arquivo .json do WhatsApp</label><input type="file" id="recFile" accept=".json,application/json,text/plain"></div>
+      <details>
+        <summary>Ou cole o conteúdo do arquivo</summary>
+        <div class="stack"><textarea id="recTxt" aria-label="Conteúdo da ficha em JSON"></textarea></div>
+      </details>
+      <div><button type="button" class="btn primary" id="btnCarregar">Carregar ficha</button></div>
+      <p class="msg" id="recMsg" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <div class="layout">
+    <form class="form" id="form" autocomplete="off" novalidate>
+
+      <section class="sec">
+        <h2>Cliente</h2>
+        <div class="grid">
+          <div class="field name-big"><label for="nome">Nome provisório</label><input type="text" id="nome" data-k="nome"></div>
+          <div class="field"><label for="falou">O que o cliente falou</label><textarea id="falou" data-k="falou"></textarea></div>
+        </div>
+      </section>
+
+      <section class="sec">
+        <h2>Pontos medidos</h2>
+        <div class="items" id="itens"></div>
+        <button type="button" class="btn add" id="btnAdd">+ Adicionar ponto</button>
+      </section>
+
+      <section class="sec">
+        <h2>Acesso e instalação</h2>
+        <div class="grid">
+          <fieldset class="field"><legend>Marque o que se aplica</legend><div class="chips" id="acessoChips"></div></fieldset>
+          <div class="field"><label for="acessoNota">Detalhes do local</label><textarea id="acessoNota" data-k="acessoNota" placeholder="Altura, tipo de parede, onde fica o suporte"></textarea></div>
+          <div class="field">
+            <label for="fotoLocal">Fotos do local</label>
+            <p class="small" style="display:block">Local inteiro, altura, tipo de parede e onde ficaria o suporte.</p>
+            <div class="fotos" id="fotosLocal"></div>
+            <div class="foto-acoes"><label class="btn ghost"><input class="sr" type="file" accept="image/*" capture="environment" id="fotoLocalCam"><span>Câmera</span></label> <label class="btn ghost"><input class="sr" type="file" accept="image/*" multiple id="fotoLocal"><span>Galeria</span></label></div>
+            <p class="small" id="fmsgLocal"></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="sec">
+        <h2>Urgência</h2>
+        <div class="stars" id="stars" role="radiogroup" aria-label="Urgência de 1 a 5 estrelas"></div>
+      </section>
+    </form>
+
+    <aside class="summary" id="resumo" aria-label="Ficha para enviar">
+      <div class="sum-head"><h2>Ficha para enviar</h2></div>
+      <p class="status" id="status"><span class="dot"></span><span id="statusTxt"></span></p>
+      <textarea id="out" readonly aria-label="Texto do resumo" placeholder="O resumo aparece aqui conforme você preenche."></textarea>
+      <p class="small" id="fotoInfo"></p>
+      <div class="actions">
+        <button type="button" class="btn primary" id="btnEnviar">Enviar pelo WhatsApp</button>
+        <p class="passo" id="passo"></p>
+        <a class="btn outline" id="btnZap" target="_blank" rel="noopener">Abrir WhatsApp só com o resumo</a>
+        <button type="button" class="btn ghost" id="btnCopiar">Copiar resumo</button>
+      </div>
+      <p class="msg" id="msg" aria-live="polite"></p>
+      <details>
+        <summary>Ver dados do arquivo</summary>
+        <div class="stack">
+          <textarea id="outJson" readonly aria-label="Dados do arquivo em JSON"></textarea>
+          <button type="button" class="btn ghost" id="btnCopiarJson">Copiar dados (JSON)</button>
+        </div>
+      </details>
+      <p class="small" id="saved"></p>
+    </aside>
+  </div>
+</div>
+
+<div class="bar">
+  <p id="barStatus">Ficha vazia</p>
+  <button type="button" class="btn primary" id="btnVer">Ver ficha</button>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var KEY='ficha-orcamento-v4';
+  var ACESSO=['Precisa de guincho','Acesso difícil','Instalação difícil','Suporte especial','Parede ou base difícil'];
+  var MAX_FOTOS=4,MAX_LOCAL=8;
+
+  var storageOk=true,gravado=false,idb=null,PH={};
+
+  function $(s,r){return (r||document).querySelector(s);}
+  function $$(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));}
+  function pad(n){return String(n).padStart(2,'0');}
+  function iso(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+  function hoje(){return iso(new Date());}
+  function fmtData(v){if(!v)return '';var p=v.split('-');return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:v;}
+  function uid(){return Math.random().toString(36).slice(2,8);}
+  function t(v){return String(v==null?'':v).trim();}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function num(v){var n=parseFloat(t(v).replace(',','.'));return isFinite(n)?n:null;}
+  function fmt(n){return n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+  function r4(n){return Math.round(n*10000)/10000;}
+  function nn(v){v=t(v);return v?v:null;}
+  function slug(s){return t(s).toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');}
+  function opId(){return 'OP-'+hoje().replace(/-/g,'')+'-'+uid().toUpperCase();}
+  function idbOpen(){
+    return new Promise(function(res){
+      try{
+        var rq=indexedDB.open('ficha-fotos',1);
+        rq.onupgradeneeded=function(){rq.result.createObjectStore('f');};
+        rq.onsuccess=function(){res(rq.result);};
+        rq.onerror=function(){res(null);};
+      }catch(e){res(null);}
+    });
+  }
+  function idbPut(k,v){if(!idb)return;try{idb.transaction('f','readwrite').objectStore('f').put(v,k);}catch(e){}}
+  function idbDel(k){if(!idb)return;try{idb.transaction('f','readwrite').objectStore('f').delete(k);}catch(e){}}
+  function idbGet(k){
+    return new Promise(function(res){
+      if(!idb)return res(null);
+      try{var r=idb.transaction('f').objectStore('f').get(k);r.onsuccess=function(){res(r.result||null);};r.onerror=function(){res(null);};}catch(e){res(null);}
+    });
+  }
+  function guardarFoto(dataUrl){var id=uid()+uid();PH[id]=dataUrl;idbPut(id,dataUrl);return id;}
+  function soltarFoto(id){delete PH[id];idbDel(id);}
+  function paraJpeg(src,w,h){
+    var k=Math.min(1,1280/Math.max(w,h));
+    var c=document.createElement('canvas');c.width=Math.max(1,Math.round(w*k));c.height=Math.max(1,Math.round(h*k));
+    c.getContext('2d').drawImage(src,0,0,c.width,c.height);
+    var out=c.toDataURL('image/jpeg',0.72);
+    c.width=c.height=0;
+    return out;
+  }
+  /* Celulares com pouca memória: decodifica já reduzida (sem abrir a foto inteira) e só uma foto por vez. */
+  function comprimirViaImg(file){
+    return new Promise(function(res,rej){
+      var url=URL.createObjectURL(file),img=new Image();
+      img.onload=function(){
+        try{var r=paraJpeg(img,img.naturalWidth,img.naturalHeight);img.src='';URL.revokeObjectURL(url);res(r);}
+        catch(e){URL.revokeObjectURL(url);rej(e);}
+      };
+      img.onerror=function(){URL.revokeObjectURL(url);rej(new Error('imagem'));};
+      img.src=url;
+    });
+  }
+  function comprimir(file){
+    if(typeof createImageBitmap==='function'){
+      return createImageBitmap(file,{resizeWidth:1280,resizeQuality:'medium'}).then(function(bm){
+        try{var r=paraJpeg(bm,bm.width,bm.height);bm.close();return r;}
+        catch(e){try{bm.close();}catch(x){}throw e;}
+      }).catch(function(){return comprimirViaImg(file);});
+    }
+    return comprimirViaImg(file);
+  }
+  function kbDe(id){return Math.round(((PH[id]||'').length*0.75)/1024);}
+
+  function novoItem(p){return Object.assign({id:uid(),desc:'',larg:'',alt:'',fotos:[]},p||{});}
+  function fresh(){
+    return {opId:opId(),nome:'',data:hoje(),falou:'',itens:[novoItem(),novoItem(),novoItem()],acesso:[],acessoNota:'',fotosLocal:[],urgencia:0};
+  }
+
+  function itemTocado(it){return !!(t(it.desc)||t(it.larg)||t(it.alt)||(it.fotos&&it.fotos.length));}
+  function touched(s){
+    if(t(s.nome)||t(s.falou)||t(s.acessoNota)||s.acesso.length||s.fotosLocal.length||s.urgencia>0)return true;
+    return s.itens.some(itemTocado);
+  }
+  function pontos(s){return s.itens.filter(itemTocado);}
+  function area(it){
+    var l=num(it.larg),a=num(it.alt);
+    if(!l||!a||l<=0||a<=0)return null;
+    return (l/100)*(a/100);
+  }
+  function tipoDe(s){return pontos(s).some(function(it){return area(it)!==null;})?'medicao':'solicitacao';}
+  function estrelas(n){var s='';for(var i=1;i<=5;i++)s+=i<=n?'★':'☆';return s;}
+
+  function build(s){
+    var sol=tipoDe(s)==='solicitacao';
+    var out=[sol?'*SOLICITAÇÃO DE MEDIÇÃO*':'*FICHA DE MEDIÇÃO*'];
+    function add(title,lines){var l=lines.filter(Boolean);if(l.length){out.push('','*'+title+'*');l.forEach(function(x){out.push(x);});}}
+    out.push('Cliente (provisório): '+(t(s.nome)||'não informado'));
+    out.push(fmtData(s.data));
+    out.push('Ficha: '+s.opId);
+    if(s.urgencia>0)out.push('Urgência: '+estrelas(s.urgencia)+' ('+s.urgencia+' de 5)');
+
+    add('O CLIENTE FALOU',[t(s.falou)]);
+
+    var linhas=[],soma=0,comArea=0,n=0;
+    pontos(s).forEach(function(it){
+      n++;
+      var a=area(it),med='';
+      if(t(it.larg)&&t(it.alt))med=t(it.larg)+' x '+t(it.alt)+' cm';
+      else if(t(it.larg))med='largura '+t(it.larg)+' cm';
+      else if(t(it.alt))med='altura '+t(it.alt)+' cm';
+      var info=[med,a!==null&&fmt(a)+' m²'].filter(Boolean).join(', ');
+      if(a!==null){soma+=a;comArea++;}
+      linhas.push(n+') '+(t(it.desc)||'Sem descrição')+(info?': '+info:''));
+      if(it.fotos&&it.fotos.length)linhas.push('   Fotos: '+it.fotos.length+' (enviadas junto)');
+    });
+    if(comArea>1)linhas.push('Área total: '+fmt(soma)+' m²');
+    add('PONTOS',linhas);
+
+    var ac=s.acesso.map(function(x){return '- '+x;});
+    if(t(s.acessoNota))ac.push(t(s.acessoNota));
+    if(s.fotosLocal.length)ac.push('Fotos do local: '+s.fotosLocal.length+' (enviadas junto)');
+    add('ACESSO E INSTALAÇÃO',ac);
+    return out.join('\n');
+  }
+
+  function faltas(s){
+    var f=[],pts=pontos(s);
+    if(!t(s.nome))f.push('nome do cliente');
+    if(!pts.some(function(it){return t(it.desc);}))f.push('descrição de pelo menos um ponto');
+    if(tipoDe(s)==='medicao'){
+      var sem=[];
+      pts.forEach(function(it,i){if(t(it.desc)&&area(it)===null)sem.push(i+1);});
+      if(sem.length)f.push('largura e altura do ponto '+sem.join(', '));
+    }
+    return f;
+  }
+
+  function fotosJson(ids,prefixo,comFotos){
+    return ids.filter(function(id){return PH[id];}).map(function(id,i){
+      return {nome:prefixo+'-'+(i+1)+'.jpg',tipo:'image/jpeg',tamanhoKB:kbDe(id),dataUrl:comFotos?PH[id]:null};
+    });
+  }
+  function buildJSON(s,comFotos){
+    var lista=[],soma=0,tem=false;
+    pontos(s).forEach(function(it){
+      var ord=lista.length+1,a=area(it),l=num(it.larg),h=num(it.alt);
+      if(a!==null){soma+=a;tem=true;}
+      lista.push({
+        ordem:ord,
+        descricao:nn(it.desc),
+        larguraCm:l,
+        alturaCm:h,
+        areaM2:a!==null?r4(a):null,
+        fotos:fotosJson(it.fotos,'ponto-'+ord+'-foto',comFotos)
+      });
+    });
+    return {
+      formato:'vs-oportunidade',
+      versao:3,
+      tipo:tipoDe(s),
+      id:s.opId,
+      criadoEm:new Date().toISOString(),
+      dataDoPedido:s.data||null,
+      cliente:{nomeProvisorio:nn(s.nome)},
+      clienteFalou:nn(s.falou),
+      pontos:lista,
+      areaTotalM2:tem?r4(soma):null,
+      acessoInstalacao:{
+        marcados:s.acesso.slice(),
+        precisaGuincho:s.acesso.indexOf('Precisa de guincho')>=0,
+        observacao:nn(s.acessoNota),
+        fotos:fotosJson(s.fotosLocal,'local-foto',comFotos)
+      },
+      urgencia:s.urgencia>0?s.urgencia:null,
+      faltando:faltas(s),
+      resumoTexto:build(s)
+    };
+  }
+
+  /* estado */
+  var S=load()||fresh();
+  function load(){
+    try{
+      var r=localStorage.getItem(KEY);
+      if(r){
+        var o=JSON.parse(r);
+        if(o&&Array.isArray(o.itens)&&o.itens.length){
+          var s=Object.assign(fresh(),o);
+          if(!Array.isArray(s.acesso))s.acesso=[];
+          if(!Array.isArray(s.fotosLocal))s.fotosLocal=[];
+          s.itens=s.itens.map(function(it){var n=novoItem(it);if(!Array.isArray(n.fotos))n.fotos=[];return n;});
+          if(!touched(s)){s.data=hoje();s.opId=opId();}
+          return s;
+        }
+      }
+    }catch(e){}
+    return null;
+  }
+  var saveTimer=null;
+  function save(){
+    clearTimeout(saveTimer);
+    saveTimer=setTimeout(function(){
+      try{localStorage.setItem(KEY,JSON.stringify(S));storageOk=true;}catch(e){storageOk=false;}
+      $('#saved').textContent=storageOk&&touched(S)?'Rascunho salvo neste aparelho, com as fotos.':'';
+    },250);
+  }
+
+  /* campos fixos */
+  $('#acessoChips').innerHTML=ACESSO.map(function(o){
+    return '<label class="chip"><input type="checkbox" data-acesso value="'+esc(o)+'"><span>'+esc(o)+'</span></label>';
+  }).join('');
+  $$('[data-k]').forEach(function(el){
+    var k=el.getAttribute('data-k');
+    el.addEventListener('input',function(){S[k]=el.value;update();});
+  });
+  $$('[data-acesso]').forEach(function(el){
+    el.addEventListener('change',function(){
+      var v=el.value,i=S.acesso.indexOf(v);
+      if(el.checked&&i<0)S.acesso.push(v);
+      if(!el.checked&&i>=0)S.acesso.splice(i,1);
+      update();
+    });
+  });
+  function pushToFields(){
+    $$('[data-k]').forEach(function(el){var k=el.getAttribute('data-k');el.value=S[k]==null?'':S[k];});
+    $$('[data-acesso]').forEach(function(el){el.checked=S.acesso.indexOf(el.value)>=0;});
+  }
+
+  /* estrelas */
+  function renderStars(){
+    $('#stars').innerHTML=[1,2,3,4,5].map(function(n){
+      return '<button type="button" class="star'+(n<=S.urgencia?' on':'')+'" role="radio" aria-checked="'+(n===S.urgencia)+'" data-n="'+n+'" aria-label="'+n+(n===1?' estrela':' estrelas')+'">'+(n<=S.urgencia?'&#9733;':'&#9734;')+'</button>';
+    }).join('')+'<span class="star-txt">'+(S.urgencia?S.urgencia+' de 5':'Sem urgência marcada')+'</span>';
+  }
+  $('#stars').addEventListener('click',function(e){
+    var b=e.target.closest('[data-n]');if(!b)return;
+    var n=parseInt(b.getAttribute('data-n'),10);
+    S.urgencia=n===S.urgencia?0:n;
+    renderStars();update();
+  });
+
+  /* fotos */
+  function thumbsHTML(ids,rotulo){
+    return ids.filter(function(id){return PH[id];}).map(function(id,i){
+      return '<figure class="thumb"><img src="'+PH[id]+'" alt="'+rotulo+' '+(i+1)+'"><button type="button" class="x" data-act="rmfoto" data-pid="'+id+'" aria-label="Remover foto '+(i+1)+'">&#10005;</button></figure>';
+    }).join('');
+  }
+  function adicionarFotos(files,lista,max,msgEl,redesenhar){
+    files=Array.prototype.slice.call(files||[]);
+    if(!files.length)return;
+    var livre=max-lista.length;
+    if(livre<=0){msgEl.textContent='Limite de '+max+' fotos.';return;}
+    var usar=files.slice(0,livre);
+    msgEl.textContent='Preparando...';
+    var seq=Promise.resolve(),ids=[];
+    usar.forEach(function(f){
+      seq=seq.then(function(){return comprimir(f).then(guardarFoto,function(){return null;});}).then(function(id){ids.push(id);});
+    });
+    seq.then(function(){
+      var ok=ids.filter(Boolean);
+      ok.forEach(function(id){lista.push(id);});
+      redesenhar();
+      msgEl.textContent=ok.length<usar.length?'Alguma foto não pôde ser lida. Tente de novo.':(files.length>usar.length?'Limite de '+max+' fotos.':'');
+      update();
+    });
+  }
+  function renderFotosLocal(){$('#fotosLocal').innerHTML=thumbsHTML(S.fotosLocal,'Foto do local');}
+  ['#fotoLocal','#fotoLocalCam'].forEach(function(sel){
+    $(sel).addEventListener('change',function(e){
+      var files=e.target.files;
+      adicionarFotos(files,S.fotosLocal,MAX_LOCAL,$('#fmsgLocal'),renderFotosLocal);
+      e.target.value='';
+    });
+  });
+  $('#fotosLocal').addEventListener('click',function(e){
+    var b=e.target.closest('[data-act="rmfoto"]');if(!b)return;
+    var pid=b.getAttribute('data-pid');
+    S.fotosLocal=S.fotosLocal.filter(function(x){return x!==pid;});
+    soltarFoto(pid);renderFotosLocal();update();
+  });
+
+  /* pontos */
+  function itemHTML(it,idx){
+    var id=it.id;
+    return '<article class="item" data-id="'+id+'">'+
+      '<div class="item-head"><h3>Ponto '+(idx+1)+'</h3><div class="item-act"><button type="button" class="link" data-act="dup">Duplicar</button>'+(S.itens.length>1?'<button type="button" class="link" data-act="rm">Remover</button>':'')+'</div></div>'+
+      '<div class="field"><label for="d-'+id+'">Descrição breve</label><textarea id="d-'+id+'" data-f="desc" rows="2" placeholder="Ex.: vitrine esquerda, adesivo perfurado">'+esc(it.desc)+'</textarea></div>'+
+      '<div class="grid">'+
+        '<div class="field m6"><label for="l-'+id+'">Largura (cm)</label><input type="text" id="l-'+id+'" data-f="larg" inputmode="decimal" value="'+esc(it.larg)+'"></div>'+
+        '<div class="field m6"><label for="a-'+id+'">Altura (cm)</label><input type="text" id="a-'+id+'" data-f="alt" inputmode="decimal" value="'+esc(it.alt)+'"></div>'+
+      '</div>'+
+      '<p class="readout" data-readout hidden></p>'+
+      '<div class="fotos" data-fotos></div>'+
+      '<div class="foto-acoes"><label class="btn ghost"><input class="sr" type="file" accept="image/*" capture="environment" data-foto><span>Câmera</span></label> <label class="btn ghost"><input class="sr" type="file" accept="image/*" multiple data-foto><span>Galeria</span></label></div>'+
+      '<p class="small" data-fmsg></p>'+
+    '</article>';
+  }
+  function itemDoArt(art){var id=art.getAttribute('data-id');return S.itens.filter(function(x){return x.id===id;})[0];}
+  function readout(art){
+    var it=itemDoArt(art);if(!it)return;
+    var a=area(it),el=$('[data-readout]',art);
+    if(a===null){el.hidden=true;el.textContent='';return;}
+    el.hidden=false;el.textContent='Área: '+fmt(a)+' m²';
+  }
+  function renderFotos(art){
+    var it=itemDoArt(art);if(!it)return;
+    $('[data-fotos]',art).innerHTML=thumbsHTML(it.fotos,'Foto do ponto');
+  }
+  function renderItems(){
+    $('#itens').innerHTML=S.itens.map(itemHTML).join('');
+    $$('#itens .item').forEach(function(art){readout(art);renderFotos(art);});
+  }
+  $('#itens').addEventListener('input',function(e){
+    var el=e.target,f=el.getAttribute('data-f');
+    if(!f)return;
+    var art=el.closest('.item'),it=itemDoArt(art);
+    if(!it)return;
+    it[f]=el.value;
+    readout(art);
+    update();
+  });
+  $('#itens').addEventListener('change',function(e){
+    var el=e.target;
+    if(!el.hasAttribute||!el.hasAttribute('data-foto'))return;
+    var art=el.closest('.item'),it=itemDoArt(art);
+    var files=el.files;
+    if(it)adicionarFotos(files,it.fotos,MAX_FOTOS,$('[data-fmsg]',art),function(){renderFotos(art);});
+    el.value='';
+  });
+  $('#itens').addEventListener('click',function(e){
+    var b=e.target.closest('[data-act]');
+    if(!b)return;
+    var art=b.closest('.item'),it=itemDoArt(art),act=b.getAttribute('data-act');
+    if(!it)return;
+    if(act==='rmfoto'){
+      var pid=b.getAttribute('data-pid');
+      it.fotos=it.fotos.filter(function(x){return x!==pid;});
+      soltarFoto(pid);renderFotos(art);update();return;
+    }
+    if(act==='rm'){
+      it.fotos.forEach(soltarFoto);
+      S.itens=S.itens.filter(function(x){return x.id!==it.id;});
+      if(!S.itens.length)S.itens=[novoItem()];
+      renderItems();update();return;
+    }
+    if(act==='dup'){
+      var cp=novoItem({desc:it.desc,larg:it.larg,alt:it.alt});
+      S.itens.splice(S.itens.indexOf(it)+1,0,cp);
+      renderItems();update();
+      var el=document.getElementById('d-'+cp.id);if(el)el.focus();
+    }
+  });
+  $('#btnAdd').addEventListener('click',function(){
+    var it=novoItem();S.itens.push(it);
+    renderItems();update();
+    var el=document.getElementById('d-'+it.id);if(el)el.focus();
+  });
+
+  /* ficha recebida */
+  var recArmado=false;
+  function recMsg(m){$('#recMsg').textContent=m;}
+  function cmTxt(n){return n==null?'':String(Math.round(n*10)/10).replace('.',',');}
+  function aplicarFicha(o){
+    var s=fresh();
+    s.opId=t(o.id)||s.opId;
+    var cl=o.cliente||{};
+    s.nome=t(cl.nomeProvisorio||cl.nome);
+    s.falou=[t(o.clienteFalou),t(o.pedidoDoComercial),t(o.observacoesGerais)].filter(Boolean).join('\n');
+    var pts=Array.isArray(o.pontos)?o.pontos:[];
+    var novos=pts.slice(0,60).map(function(p){
+      p=p||{};
+      var md=p.medidaDigitada||{},k=md.unidade==='m'?100:1;
+      var l=p.larguraCm!=null?num(p.larguraCm):(num(md.largura)!=null?num(md.largura)*k:null);
+      var h=p.alturaCm!=null?num(p.alturaCm):(num(md.altura)!=null?num(md.altura)*k:null);
+      var desc=[t(p.descricao),t(p.pedidoDoComercial),t(p.observacao)].filter(Boolean).join(' | ');
+      var it=novoItem({desc:desc,larg:cmTxt(l),alt:cmTxt(h)});
+      (Array.isArray(p.fotos)?p.fotos:[]).slice(0,MAX_FOTOS).forEach(function(f){
+        if(f&&typeof f.dataUrl==='string'&&f.dataUrl.indexOf('data:image/')===0)it.fotos.push(guardarFoto(f.dataUrl));
+      });
+      return it;
+    });
+    s.itens=novos.length?novos:[novoItem(),novoItem(),novoItem()];
+    var ai=o.acessoInstalacao||{};
+    s.acesso=Array.isArray(ai.marcados)?ai.marcados.filter(function(x){return ACESSO.indexOf(x)>=0;}):[];
+    s.acessoNota=t(ai.observacao);
+    (Array.isArray(ai.fotos)?ai.fotos:[]).slice(0,MAX_LOCAL).forEach(function(f){
+      if(f&&typeof f.dataUrl==='string'&&f.dataUrl.indexOf('data:image/')===0)s.fotosLocal.push(guardarFoto(f.dataUrl));
+    });
+    var u=parseInt(o.urgencia,10);
+    s.urgencia=u>=1&&u<=5?u:0;
+    S.itens.forEach(function(it){it.fotos.forEach(soltarFoto);});
+    S.fotosLocal.forEach(soltarFoto);
+    S=s;
+    pushToFields();renderItems();renderFotosLocal();renderStars();update();
+  }
+  $('#btnCarregar').addEventListener('click',function(){
+    var txt=t($('#recTxt').value);
+    if(!txt){recMsg('Escolha o arquivo ou cole o conteúdo antes de carregar.');return;}
+    var o=null;
+    try{o=JSON.parse(txt);}catch(e){}
+    if(!o||o.formato!=='vs-oportunidade'){recMsg('Este arquivo não é uma ficha da VS Graf. Escolha o .json que veio no WhatsApp.');return;}
+    if(touched(S)&&!recArmado){
+      recArmado=true;
+      recMsg('Já existe uma ficha em andamento. Toque em Carregar ficha de novo para substituí-la.');
+      return;
+    }
+    recArmado=false;
+    aplicarFicha(o);
+    $('#recTxt').value='';
+    $('#receber').hidden=true;
+    msg('Ficha carregada. Meça, fotografe e depois grave e envie.');
+    window.scrollTo(0,0);
+  });
+  $('#recFile').addEventListener('change',function(e){
+    var f=e.target.files&&e.target.files[0];if(!f)return;
+    var r=new FileReader();
+    r.onload=function(){$('#recTxt').value=String(r.result||'');recArmado=false;recMsg('Arquivo lido. Toque em Carregar ficha.');};
+    r.onerror=function(){recMsg('Não consegui ler o arquivo.');};
+    r.readAsText(f);
+    e.target.value='';
+  });
+  $('#btnReceber').addEventListener('click',function(){var c=$('#receber');c.hidden=!c.hidden;recArmado=false;if(!c.hidden)c.scrollIntoView({block:'nearest'});});
+  $('#btnFecharRec').addEventListener('click',function(){$('#receber').hidden=true;});
+
+  /* resumo e envio */
+  var ta=$('#out'),tj=$('#outJson');
+  function podeCompartilhar(){return !!(navigator.share&&navigator.canShare);}
+  function refreshPasso(){
+    var p=$('#passo'),zap=$('#btnZap'),env=$('#btnEnviar');
+    var on=touched(S),sh=podeCompartilhar();
+    env.hidden=false;
+    p.className='passo';
+    p.textContent=sh?'Escolha o WhatsApp e a conversa. As fotos e a ficha vão juntas.':'Este navegador não compartilha arquivos: a ficha será baixada e o WhatsApp abre com o resumo. Anexe o arquivo e as fotos.';
+    zap.classList.toggle('primary',false);
+    zap.classList.toggle('outline',true);
+  }
+  function update(){
+    gravado=false;
+    var on=touched(S);
+    ta.value=on?build(S):'';
+    tj.value=on?JSON.stringify(buildJSON(S,false),null,2):'';
+
+    var nf=0,kb=0;
+    S.itens.forEach(function(it){it.fotos.forEach(function(id){if(PH[id]){nf++;kb+=kbDe(id);}});});
+    S.fotosLocal.forEach(function(id){if(PH[id]){nf++;kb+=kbDe(id);}});
+    $('#fotoInfo').textContent=nf?'Fotos: '+nf+' ('+(kb>=1024?(kb/1024).toFixed(1).replace('.',',')+' MB':kb+' KB')+'), vão como imagens junto com a ficha.':'';
+
+    var st=$('#status'),txt=$('#statusTxt'),bar=$('#barStatus'),f=faltas(S);
+    st.classList.remove('ok','warn');
+    if(!on){txt.textContent='Ficha vazia.';bar.textContent='Ficha vazia';}
+    else if(f.length){st.classList.add('warn');txt.textContent='Falta: '+f.join(', ')+'.';bar.textContent=f.length===1?'Falta 1 dado':'Faltam '+f.length+' dados';}
+    else{
+      st.classList.add('ok');
+      txt.textContent=tipoDe(S)==='solicitacao'?'Pronto. Sem medidas: segue como solicitação para o técnico.':'Pronto para enviar.';
+      bar.textContent='Pronto para enviar';
+    }
+
+    var zap=$('#btnZap');
+    ['#btnEnviar','#btnCopiar','#btnZap','#btnCopiarJson'].forEach(function(s){$(s).setAttribute('aria-disabled',on?'false':'true');});
+    if(on)zap.setAttribute('href','https://wa.me/?text='+encodeURIComponent(ta.value));
+    else zap.removeAttribute('href');
+    $('#msg').textContent='';
+    refreshPasso();
+    save();
+  }
+
+  var msgTimer=null;
+  function msg(m){var el=$('#msg');el.textContent=m;clearTimeout(msgTimer);msgTimer=setTimeout(function(){el.textContent='';},8000);}
+  function copiar(el,ok){
+    var text=el.value;
+    function manual(){
+      el.focus();el.select();
+      var done=false;try{done=document.execCommand('copy');}catch(e){}
+      msg(done?ok:'Não consegui copiar sozinho. O texto está selecionado: use Ctrl+C ou o botão Copiar do celular.');
+    }
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){msg(ok);},manual);
+    }else manual();
+  }
+  $('#btnCopiar').addEventListener('click',function(){if(touched(S))copiar(ta,'Resumo copiado. Cole no WhatsApp ou onde preferir.');});
+  $('#btnCopiarJson').addEventListener('click',function(){
+    if(!touched(S))return;
+    var tmp=document.createElement('textarea');
+    tmp.value=JSON.stringify(buildJSON(S,true),null,2);
+    tmp.setAttribute('readonly','');tmp.style.position='fixed';tmp.style.opacity='0';
+    document.body.appendChild(tmp);
+    copiar(tmp,'Dados copiados, com as fotos.');
+    setTimeout(function(){tmp.remove();},300);
+  });
+  function dataUrlToFile(du,nome){
+    return fetch(du).then(function(r){return r.blob();}).then(function(bl){return new File([bl],nome,{type:'image/jpeg'});});
+  }
+  function arquivosFotos(){
+    var out=[],base=slug(S.nome)||'cliente';
+    pontos(S).forEach(function(it,i){
+      it.fotos.filter(function(id){return PH[id];}).forEach(function(id,j){out.push([base+'-ponto-'+(i+1)+'-foto-'+(j+1)+'.jpg',PH[id]]);});
+    });
+    S.fotosLocal.filter(function(id){return PH[id];}).forEach(function(id,j){out.push([base+'-local-foto-'+(j+1)+'.jpg',PH[id]]);});
+    return out;
+  }
+  function baixar(file){
+    var u=URL.createObjectURL(file),a=document.createElement('a');
+    a.href=u;a.download=file.name;document.body.appendChild(a);a.click();
+    setTimeout(function(){URL.revokeObjectURL(u);a.remove();},1500);
+  }
+  var enviando=false;
+  $('#btnEnviar').addEventListener('click',function(){
+    if(!touched(S)||enviando)return;
+    enviando=true;
+    var d=buildJSON(S,false),now=new Date();
+    var base=(d.tipo==='solicitacao'?'solicitacao-':'ficha-')+(slug(S.nome)||'sem-cliente')+'-'+hoje().replace(/-/g,'')+'-'+pad(now.getHours())+pad(now.getMinutes());
+    var jsonTxt=JSON.stringify(d,null,2),texto=ta.value;
+    var fotos=arquivosFotos();
+    Promise.all(fotos.map(function(f){return dataUrlToFile(f[1],f[0]);})).then(function(imgs){
+      var fJson=new File([jsonTxt],base+'.json',{type:'application/json'});
+      var fTxt=new File([jsonTxt],base+'.txt',{type:'text/plain'});
+      var tentativas=[[fJson].concat(imgs),[fTxt].concat(imgs),imgs];
+      if(podeCompartilhar()){
+        for(var i=0;i<tentativas.length;i++){
+          var lista=tentativas[i];
+          if(!lista.length)continue;
+          var ok=false;try{ok=navigator.canShare({files:lista});}catch(e){}
+          if(ok){
+            return navigator.share({files:lista,text:texto,title:'Ficha de orçamento'}).then(function(){
+              msg('Enviado para o compartilhamento. Confira no WhatsApp.');
+            },function(err){
+              if(err&&err.name==='AbortError')msg('Envio cancelado.');
+              else msg('Não consegui compartilhar. Use Copiar resumo.');
+            });
+          }
+        }
+      }
+      baixar(fJson);
+      imgs.forEach(function(f,i){setTimeout(function(){baixar(f);},400*(i+1));});
+      msg('Arquivos baixados. Abra o WhatsApp e anexe a ficha e as fotos.');
+      window.open('https://wa.me/?text='+encodeURIComponent(texto),'_blank');
+    }).then(function(){enviando=false;},function(){enviando=false;msg('Algo falhou ao montar o envio.');});
+  });
+
+  var limparTimer=null,limparArmado=false,bl=$('#btnLimpar');
+  bl.addEventListener('click',function(){
+    if(!limparArmado){
+      limparArmado=true;bl.textContent='Toque de novo para limpar';
+      limparTimer=setTimeout(function(){limparArmado=false;bl.textContent='Limpar tudo';},4000);
+      return;
+    }
+    clearTimeout(limparTimer);limparArmado=false;bl.textContent='Limpar tudo';
+    S.itens.forEach(function(it){it.fotos.forEach(soltarFoto);});
+    S.fotosLocal.forEach(soltarFoto);
+    S=fresh();pushToFields();renderItems();renderFotosLocal();renderStars();update();
+  });
+  $('#btnVer').addEventListener('click',function(){
+    var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    $('#resumo').scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});
+  });
+  $('#form').addEventListener('submit',function(e){e.preventDefault();});
+
+  pushToFields();renderItems();renderFotosLocal();renderStars();update();
+
+  /* fotos salvas no aparelho voltam depois que o IndexedDB abre */
+  idbOpen().then(function(db){
+    idb=db;
+    var ids=S.fotosLocal.slice();
+    S.itens.forEach(function(it){it.fotos.forEach(function(id){ids.push(id);});});
+    function limpar(){
+      S.itens.forEach(function(it){it.fotos=it.fotos.filter(function(id){return PH[id];});});
+      S.fotosLocal=S.fotosLocal.filter(function(id){return PH[id];});
+    }
+    if(!db||!ids.length){limpar();return;}
+    return Promise.all(ids.map(function(id){return idbGet(id).then(function(v){if(v)PH[id]=v;});})).then(function(){
+      limpar();
+      $$('#itens .item').forEach(renderFotos);
+      renderFotosLocal();
+      update();
+    });
+  });
+
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
+  if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0){
+    window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
+  }
+})();
+</script>
+</body>
+</html>
